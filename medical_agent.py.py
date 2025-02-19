@@ -7,7 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/1M46OsVaZcS9uUQqx9C2t2IAulPtvUwQa
 """
 
-!git clone https://github.com/sudhanshukumartech/Code_Commanders.git
 
 from transformers import pipeline
 
