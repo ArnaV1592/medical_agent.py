@@ -1,4 +1,3 @@
 streamlit
 google-generativeai
 textblob
-sentence-transformers==2.2.2  # Use a recent, stable version
