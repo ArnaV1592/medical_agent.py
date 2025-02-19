@@ -2,6 +2,8 @@ import streamlit as st
 import google.generativeai as genai
 from textblob import TextBlob
 import json
+from sentence_transformers import SentenceTransformer
+import numpy as np
 
 # Get the API key from Streamlit Secrets
 try:
@@ -12,6 +14,41 @@ except KeyError:
 
 genai.configure(api_key=GOOGLE_API_KEY)
 
+# Load Sentence Transformer model
+model = SentenceTransformer('all-MiniLM-L6-v2')
+
+# Define knowledge base
+knowledge_base = {
+    "headache": [
+        "Tension headaches are often caused by stress and muscle tension.",
+        "Migraines can cause intense throbbing pain and sensitivity to light and sound.",
+        "Cluster headaches are severe headaches that occur in clusters, often with nasal congestion and eye tearing.",
+        "AI can be used to predict migraine attacks based on physiological data.",
+    ],
+    "chest pain": [
+        "Chest pain can be caused by heart problems, such as angina or a heart attack.",
+        "It can also be caused by musculoskeletal issues, such as costochondritis.",
+        "Anxiety and panic attacks can also cause chest pain.",
+        "AI can analyze ECG data to detect heart abnormalities."
+    ],
+    "insomnia": [
+        "Insomnia can be caused by stress, anxiety, depression, or poor sleep habits.",
+        "Cognitive behavioral therapy for insomnia (CBT-I) is an effective treatment.",
+        "Medications can also be used to treat insomnia, but they can have side effects.",
+        "Wearable sensors can track sleep patterns and identify potential sleep disorders."
+    ],
+    "ai in medicine": [
+        "AI can analyze medical images to detect diseases like cancer.",
+        "AI can help predict patient outcomes and personalize treatment plans.",
+        "AI can be used to develop new drugs and therapies.",
+        "AI can monitor patients remotely and alert healthcare providers to potential problems."
+    ]
+}
+
+# Embed knowledge base
+embedded_knowledge = {}
+for category, facts in knowledge_base.items():
+    embedded_knowledge[category] = model.encode(facts)
 
 def analyze_sentiment(text):
     """Analyzes the sentiment of the given text using TextBlob."""
@@ -30,17 +67,31 @@ def analyze_sentiment(text):
 
     return sentiment_label, sentiment_score
 
+def retrieve_relevant_knowledge(query):
+    """Retrieves relevant knowledge from the knowledge base."""
+    query_embedding = model.encode(query)
+    scores = {}
+    for category, embeddings in embedded_knowledge.items():
+        scores[category] = np.max(np.dot(embeddings, query_embedding) / (np.linalg.norm(embeddings, axis=1) * np.linalg.norm(query_embedding)))
+
+    most_relevant_category = max(scores, key=scores.get)
+    relevant_facts = knowledge_base[most_relevant_category]
+    return relevant_facts
 
 def generate_personalized_response(symptoms, emotion, sentiment_label, sentiment_score):
     """Generates a personalized response using the LLM."""
     model = genai.GenerativeModel('gemini-pro')
 
-    prompt = f"""You are an empathetic and highly knowledgeable clinical and technology expert. Your task is to help patients understand their symptoms and provide structured, clear, and compassionate medical advice, including AI-powered insights.
+    relevant_knowledge = retrieve_relevant_knowledge(symptoms + " " + emotion)
+
+    prompt = f"""You are an empathetic and highly knowledgeable clinical and technology expert. Your task is to help patients understand their symptoms and provide structured, clear, and compassionate medical advice, including AI-powered insights. You will use chain of reasoning.
+
+    First, reason step by step about the user's query.
+    Second, use the following knowledge base: {relevant_knowledge}.
+    Third, you will provide a structured JSON response example like the following:
 
     User Query: I have been experiencing {symptoms}.
     My emotional state is: {emotion}. Sentiment analysis indicates {sentiment_label} with a score of {sentiment_score:.2f}.
-
-    Please provide a structured JSON response example like the following:
 
     ```json
     {{
@@ -66,12 +117,13 @@ def generate_personalized_response(symptoms, emotion, sentiment_label, sentiment
 
     Follow these instructions:
 
-    1.  **Possible Conditions:** List two possible conditions that could explain the symptoms. Include a confidence score (0.0-1.0) indicating the likelihood of each condition based on the provided information and an explanation.
-    2.  **First Aid Medications/Interventions:** Suggest two immediate interventions or over-the-counter medications and provide a rationale for each suggestion.
-    3.  **Nutritional/Welfare Recommendations:** Suggest two nutritional or lifestyle recommendations that might help alleviate the symptoms and provide a rationale for each.
-    4.  **AI/ML in Clinical Care:** Describe a relevant AI/ML technology (if any) used for diagnosis or management of similar conditions. Provide potential applications and a short reasoning. If no technology applies, return "".
-    5.  **Additional Clinical Insights:** Include any extra information that may help in understanding the patient's condition, including factors that should prompt them to seek immediate medical attention.
-    6.  **Disclaimer:** Add the following disclaimer "This information is not a substitute for professional medical advice. Always consult with a qualified healthcare provider for diagnosis and treatment.".
+    1.  Reason about the user's query, linking it to the relevant medical knowledge.
+    2.  **Possible Conditions:** List two possible conditions that could explain the symptoms. Include a confidence score (0.0-1.0) indicating the likelihood of each condition based on the provided information and an explanation.
+    3.  **First Aid Medications/Interventions:** Suggest two immediate interventions or over-the-counter medications and provide a rationale for each suggestion.
+    4.  **Nutritional/Welfare Recommendations:** Suggest two nutritional or lifestyle recommendations that might help alleviate the symptoms and provide a rationale for each.
+    5.  **AI/ML in Clinical Care:** Describe a relevant AI/ML technology (if any) used for diagnosis or management of similar conditions. Provide potential applications and a short reasoning. If no technology applies, return an empty array "". Use knowledge base to guide it.
+    6.  **Additional Clinical Insights:** Include any extra information that may help in understanding the patient's condition, including factors that should prompt them to seek immediate medical attention.
+    7.  **Disclaimer:** Add the following disclaimer "This information is not a substitute for professional medical advice. Always consult with a qualified healthcare provider for diagnosis and treatment.".
 
     Ensure the tone is caring and human-like. Emphasize that you are an AI. The JSON response should be a valid JSON.
     """
