@@ -1,7 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
 from textblob import TextBlob
-import json
 
 # Get the API key from Streamlit Secrets
 try:
@@ -35,57 +34,24 @@ def generate_personalized_response(symptoms, emotion, sentiment_label, sentiment
     """Generates a personalized response using the LLM."""
     model = genai.GenerativeModel('gemini-pro')
 
-    prompt = f"""You are an empathetic and highly knowledgeable clinical and technology expert. Your task is to help patients understand their symptoms and provide structured, clear, and compassionate medical advice, including AI-powered insights.
+    prompt = f"""You are an empathetic and highly knowledgeable clinical assistant. Your task is to help patients understand their symptoms and provide structured, clear, and compassionate medical advice.
 
     User Query: I have been experiencing {symptoms}.
     My emotional state is: {emotion}. Sentiment analysis indicates {sentiment_label} with a score of {sentiment_score:.2f}.
 
-    Please provide a structured JSON response example like the following:
+    Please provide a structured response with the following sections:
 
-    ```json
-    {{
-      "possible_conditions": [
-        {{"condition": "Common Cold", "confidence": 0.7, "explanation": "Symptoms include runny nose, sore throat, and cough."}},
-        {{"condition": "Allergies", "confidence": 0.6, "explanation": "Symptoms include sneezing, itchy eyes, and nasal congestion."}}
-      ],
-      "first_aid_medications": [
-        {{"medication": "Rest", "rationale": "Allows the body to recover."}},
-        {{"medication": "Over-the-counter decongestant", "rationale": "Helps relieve nasal congestion."}}
-      ],
-      "nutritional_recommendations": [
-        {{"recommendation": "Chicken soup", "rationale": "Provides hydration and nutrients."}},
-        {{"recommendation": "Ginger tea", "rationale": "Soothes the throat and reduces inflammation."}}
-      ],
-      "ai_clinical_insights": [
-         {{"technology": "AI-powered cough analysis", "application": "Detecting respiratory infections", "evidence": "Studies show AI can identify cough patterns indicative of specific illnesses."}}
-      ],
-      "additional_clinical_insights": "If symptoms worsen or persist, consult a doctor.",
-      "disclaimer": "This information is not a substitute for professional medical advice. Always consult with a qualified healthcare provider for diagnosis and treatment."
-    }}
-    ```
+    1.  **Possible Conditions:** List two possible conditions that could explain the symptoms. Be aware that these should be only possibilities, and not certainties.
+    2.  **First Aid Medications/Interventions:** Suggest two immediate interventions or over-the-counter medications.
+    3.  **Nutritional/Welfare Recommendations:** Suggest two nutritional or lifestyle recommendations that might help alleviate the symptoms.
+    4.  **Additional Clinical Insights:** Include any extra information that may help in understanding the patient's condition, including factors that should prompt them to seek immediate medical attention.
 
-    Follow these instructions:
-
-    1.  **Possible Conditions:** List two possible conditions that could explain the symptoms. Include a confidence score (0.0-1.0) indicating the likelihood of each condition based on the provided information and an explanation.
-    2.  **First Aid Medications/Interventions:** Suggest two immediate interventions or over-the-counter medications and provide a rationale for each suggestion.
-    3.  **Nutritional/Welfare Recommendations:** Suggest two nutritional or lifestyle recommendations that might help alleviate the symptoms and provide a rationale for each.
-    4.  **AI/ML in Clinical Care:** Describe a relevant AI/ML technology (if any) used for diagnosis or management of similar conditions. Provide potential applications and a short reasoning. If no technology applies, return "".
-    5.  **Additional Clinical Insights:** Include any extra information that may help in understanding the patient's condition, including factors that should prompt them to seek immediate medical attention.
-    6.  **Disclaimer:** Add the following disclaimer "This information is not a substitute for professional medical advice. Always consult with a qualified healthcare provider for diagnosis and treatment.".
-
-    Ensure the tone is caring and human-like. Emphasize that you are an AI. The JSON response should be a valid JSON.
+    Ensure the tone is caring and human-like. Emphasize that you are an AI and the user should seek professional medical advice from their doctor.
     """
 
     try:
         response = model.generate_content(prompt)
-        if response.text:
-            try:
-                json_output = json.loads(response.text)
-                return json_output
-            except json.JSONDecodeError as e:
-                return f"Error decoding JSON: {e}. Raw response: {response.text}"
-        else:
-            return "The AI assistant returned an empty response. Please try again."
+        return response.text
     except Exception as e:
         return f"An error occurred while generating the response: {e}"
 
@@ -100,6 +66,8 @@ if st.button("Get Advice"):
     if symptoms and emotion:
         sentiment_label, sentiment_score = analyze_sentiment(emotion)
         response = generate_personalized_response(symptoms, emotion, sentiment_label, sentiment_score)
-        st.write(response) # Show the JSON output
+        st.write(response)
+        st.write("Disclaimer: This information is not a substitute for professional medical advice. Always consult with a qualified healthcare provider for diagnosis and treatment.") # Added Disclaimer
+
     else:
         st.warning("Please enter both your symptoms and your emotional state.")
