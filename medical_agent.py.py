@@ -1,27 +1,36 @@
 import streamlit as st
-from transformers import pipeline
 import google.generativeai as genai
-import os
+from textblob import TextBlob
 
 # Get the API key from Streamlit Secrets
 try:
     GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 except KeyError:
     st.error("Please set the GOOGLE_API_KEY secret in Streamlit Cloud.")
-    st.stop() # Stop the app if the API key is not set
+    st.stop()  # Stop the app if the API key is not set
 
 genai.configure(api_key=GOOGLE_API_KEY)
 
-sentiment_pipeline = pipeline(
-    "sentiment-analysis",
-    model="distilbert-base-uncased-finetuned-sst-2-english",
-    model_dir="./models"  # Specify a directory to store the model
-)
 
 def analyze_sentiment(text):
-    """Analyzes the sentiment of the given text."""
-    result = sentiment_pipeline(text)[0]
-    return result['label'], result['score']
+    """Analyzes the sentiment of the given text using TextBlob."""
+    analysis = TextBlob(text)
+    # Polarity ranges from -1 (negative) to +1 (positive)
+    # Subjectivity ranges from 0 (objective) to +1 (subjective)
+    polarity = analysis.sentiment.polarity
+
+    if polarity > 0:
+        sentiment_label = "POSITIVE"
+        sentiment_score = polarity
+    elif polarity < 0:
+        sentiment_label = "NEGATIVE"
+        sentiment_score = abs(polarity) # Take absolute value for score
+    else:
+        sentiment_label = "NEUTRAL"
+        sentiment_score = 0  # Neutral score
+
+    return sentiment_label, sentiment_score
+
 
 def generate_personalized_response(symptoms, emotion, sentiment_label, sentiment_score):
     """Generates a personalized response using the LLM."""
@@ -45,6 +54,7 @@ def generate_personalized_response(symptoms, emotion, sentiment_label, sentiment
         return response.text
     except Exception as e:
         return f"An error occurred while generating the response: {e}"
+
 
 # Streamlit App
 st.title("Personalized AI Medical Assistant")
