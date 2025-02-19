@@ -15,8 +15,6 @@ genai.configure(api_key=GOOGLE_API_KEY)
 def analyze_sentiment(text):
     """Analyzes the sentiment of the given text using TextBlob."""
     analysis = TextBlob(text)
-    # Polarity ranges from -1 (negative) to +1 (positive)
-    # Subjectivity ranges from 0 (objective) to +1 (subjective)
     polarity = analysis.sentiment.polarity
 
     if polarity > 0:
@@ -24,7 +22,7 @@ def analyze_sentiment(text):
         sentiment_score = polarity
     elif polarity < 0:
         sentiment_label = "NEGATIVE"
-        sentiment_score = abs(polarity) # Take absolute value for score
+        sentiment_score = abs(polarity)  # Take absolute value for score
     else:
         sentiment_label = "NEUTRAL"
         sentiment_score = 0  # Neutral score
@@ -36,17 +34,19 @@ def generate_personalized_response(symptoms, emotion, sentiment_label, sentiment
     """Generates a personalized response using the LLM."""
     model = genai.GenerativeModel('gemini-pro')
 
-    prompt = f"""You are an empathetic and helpful AI assistant designed to provide medical advice and support to patients.
-    A patient is experiencing the following symptoms: {symptoms}.
-    Their emotional state is described as: {emotion}. The sentiment analysis indicates {sentiment_label} with a score of {sentiment_score:.2f}.
+    prompt = f"""You are an empathetic and highly knowledgeable clinical assistant. Your task is to help patients understand their symptoms and provide structured, clear, and compassionate medical advice.
 
-    Provide a response that:
-    1. Acknowledges their emotions.
-    2. Offers potential explanations for their symptoms, but emphasize this is not a diagnosis.
-    3. Suggests actionable steps they can take (e.g., relaxation techniques, over-the-counter medications, when to see a doctor).
-    4. Uses empathetic and supportive language.
+    User Query: I have been experiencing {symptoms}.
+    My emotional state is: {emotion}. Sentiment analysis indicates {sentiment_label} with a score of {sentiment_score:.2f}.
 
-    Keep your response concise and easy to understand. Do not provide overly technical details.
+    Please provide a structured response with the following sections:
+
+    1.  **Possible Conditions:** List two possible conditions that could explain the symptoms. Be aware that these should be only possibilities, and not certainties.
+    2.  **First Aid Medications/Interventions:** Suggest two immediate interventions or over-the-counter medications.
+    3.  **Nutritional/Welfare Recommendations:** Suggest two nutritional or lifestyle recommendations that might help alleviate the symptoms.
+    4.  **Additional Clinical Insights:** Include any extra information that may help in understanding the patient's condition, including factors that should prompt them to seek immediate medical attention.
+
+    Ensure the tone is caring and human-like. Emphasize that you are an AI and the user should seek professional medical advice from their doctor.
     """
 
     try:
@@ -67,5 +67,7 @@ if st.button("Get Advice"):
         sentiment_label, sentiment_score = analyze_sentiment(emotion)
         response = generate_personalized_response(symptoms, emotion, sentiment_label, sentiment_score)
         st.write(response)
+        st.write("Disclaimer: This information is not a substitute for professional medical advice. Always consult with a qualified healthcare provider for diagnosis and treatment.") # Added Disclaimer
+
     else:
         st.warning("Please enter both your symptoms and your emotional state.")
