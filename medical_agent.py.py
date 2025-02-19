@@ -40,27 +40,27 @@ def generate_personalized_response(symptoms, emotion, sentiment_label, sentiment
     User Query: I have been experiencing {symptoms}.
     My emotional state is: {emotion}. Sentiment analysis indicates {sentiment_label} with a score of {sentiment_score:.2f}.
 
-    Please provide a structured JSON response with the following sections:
+    Please provide a structured JSON response example like the following:
 
     ```json
     {{
       "possible_conditions": [
-        {{"condition": "...", "confidence": 0.x, "explanation": "..."}},
-        {{"condition": "...", "confidence": 0.x, "explanation": "..."}}
+        {{"condition": "Common Cold", "confidence": 0.7, "explanation": "Symptoms include runny nose, sore throat, and cough."}},
+        {{"condition": "Allergies", "confidence": 0.6, "explanation": "Symptoms include sneezing, itchy eyes, and nasal congestion."}}
       ],
       "first_aid_medications": [
-        {{"medication": "...", "rationale": "..."}},
-        {{"medication": "...", "rationale": "..."}}
+        {{"medication": "Rest", "rationale": "Allows the body to recover."}},
+        {{"medication": "Over-the-counter decongestant", "rationale": "Helps relieve nasal congestion."}}
       ],
       "nutritional_recommendations": [
-        {{"recommendation": "...", "rationale": "..."}},
-        {{"recommendation": "...", "rationale": "..."}}
+        {{"recommendation": "Chicken soup", "rationale": "Provides hydration and nutrients."}},
+        {{"recommendation": "Ginger tea", "rationale": "Soothes the throat and reduces inflammation."}}
       ],
       "ai_clinical_insights": [
-         {{"technology": "...", "application": "...", "evidence": "..."}}
+         {{"technology": "AI-powered cough analysis", "application": "Detecting respiratory infections", "evidence": "Studies show AI can identify cough patterns indicative of specific illnesses."}}
       ],
-      "additional_clinical_insights": "...",
-      "disclaimer": "..."
+      "additional_clinical_insights": "If symptoms worsen or persist, consult a doctor.",
+      "disclaimer": "This information is not a substitute for professional medical advice. Always consult with a qualified healthcare provider for diagnosis and treatment."
     }}
     ```
 
@@ -78,9 +78,14 @@ def generate_personalized_response(symptoms, emotion, sentiment_label, sentiment
 
     try:
         response = model.generate_content(prompt)
-        #The API will return raw JSON output, and it is important to parse it here.
-        json_output = json.loads(response.text)
-        return json_output
+        if response.text:
+            try:
+                json_output = json.loads(response.text)
+                return json_output
+            except json.JSONDecodeError as e:
+                return f"Error decoding JSON: {e}. Raw response: {response.text}"
+        else:
+            return "The AI assistant returned an empty response. Please try again."
     except Exception as e:
         return f"An error occurred while generating the response: {e}"
 
@@ -96,6 +101,5 @@ if st.button("Get Advice"):
         sentiment_label, sentiment_score = analyze_sentiment(emotion)
         response = generate_personalized_response(symptoms, emotion, sentiment_label, sentiment_score)
         st.write(response) # Show the JSON output
-        st.write("Disclaimer: This information is not a substitute for professional medical advice. Always consult with a qualified healthcare provider for diagnosis and treatment.")  # Add disclaimer separately
     else:
         st.warning("Please enter both your symptoms and your emotional state.")
