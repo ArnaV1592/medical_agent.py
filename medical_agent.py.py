@@ -12,7 +12,11 @@ except KeyError:
 
 genai.configure(api_key=GOOGLE_API_KEY)
 
-sentiment_pipeline = pipeline("sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english")
+sentiment_pipeline = pipeline(
+    "sentiment-analysis",
+    model="distilbert-base-uncased-finetuned-sst-2-english",
+    model_dir="./models"  # Specify a directory to store the model
+)
 
 def analyze_sentiment(text):
     """Analyzes the sentiment of the given text."""
