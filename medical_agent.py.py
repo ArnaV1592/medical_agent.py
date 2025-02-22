@@ -4,7 +4,7 @@ from textblob import TextBlob
 
 # Get the API key from Streamlit Secrets
 try:
-    GOOGLE_API_KEY = st.secrets["AIzaSyDRzf5wsfJ0CynApO_nkd-PvSHW9pjQdB8"]
+    GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 except KeyError:
     st.error("Please set the GOOGLE_API_KEY secret in Streamlit Cloud.")
     st.stop()  # Stop the app if the API key is not set
